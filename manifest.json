@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Pegass Extractor",
+  "version": "1.0.0",
+  "description": "Extraction de statistiques des bénévoles depuis Pegass (Croix-Rouge française)",
+  "author": "UL Clamart",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "pegass-extractor@ul-clamart.croix-rouge.fr",
+      "strict_min_version": "115.0"
+    }
+  },
+  "icons": {
+    "48": "icons/icon-48.svg",
+    "96": "icons/icon-96.svg"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://pegass.croix-rouge.fr/*"
+  ],
+  "action": {
+    "default_icon": {
+      "48": "icons/icon-48.svg",
+      "96": "icons/icon-96.svg"
+    },
+    "default_title": "Pegass Extractor",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "scripts": ["background/background.js"],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://pegass.croix-rouge.fr/*"],
+      "js": ["content/scraper.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

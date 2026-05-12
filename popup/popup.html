@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pegass Extractor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="logo-icon">+</span>
+        <h1>Pegass Extractor</h1>
+      </div>
+    </header>
+
+    <section id="status-section" class="section">
+      <div id="connection-status" class="status disconnected">
+        <span class="status-dot"></span>
+        <span class="status-text">Vérification...</span>
+      </div>
+      <div id="unite-info" class="unite-info hidden"></div>
+    </section>
+
+    <!-- Section dernière extraction -->
+    <section id="last-extraction-section" class="section hidden">
+      <div class="last-extraction-header">
+        <h2>Dernière extraction</h2>
+        <button id="btn-delete-last" class="btn-icon" title="Supprimer">✕</button>
+      </div>
+      <div class="last-extraction-info">
+        <div class="info-row">
+          <span class="info-label">Date:</span>
+          <span id="last-date" class="info-value">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Bénévoles:</span>
+          <span id="last-benevoles" class="info-value">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Période:</span>
+          <span id="last-periode" class="info-value">-</span>
+        </div>
+      </div>
+      <div class="last-extraction-actions">
+        <button id="btn-download-last" class="btn-primary btn-small">
+          Télécharger JSON
+        </button>
+        <button id="btn-download-last-csv" class="btn-secondary btn-small">
+          Télécharger CSV
+        </button>
+      </div>
+    </section>
+
+    <section id="config-section" class="section">
+      <h2>Nouvelle extraction</h2>
+
+      <h2>Mode d'extraction</h2>
+      <div class="radio-group mode-group">
+        <label class="radio-label">
+          <input type="radio" name="mode" value="structure">
+          <span class="radio-mark"></span>
+          <span class="mode-text">
+            <strong>Par structure</strong>
+            <small>Activités de l'UL uniquement</small>
+          </span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="mode" value="benevole">
+          <span class="radio-mark"></span>
+          <span class="mode-text">
+            <strong>Par bénévole</strong>
+            <small>Toutes activités (y compris externes)</small>
+          </span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="mode" value="hybride" checked>
+          <span class="radio-mark"></span>
+          <span class="mode-text">
+            <strong>Hybride</strong>
+            <small>Clamart complet + renforts externes</small>
+          </span>
+        </label>
+      </div>
+
+      <h2>Période</h2>
+      <div class="date-range">
+        <div class="date-field">
+          <label for="date-debut">Du</label>
+          <input type="date" id="date-debut">
+        </div>
+        <div class="date-field">
+          <label for="date-fin">Au</label>
+          <input type="date" id="date-fin">
+        </div>
+      </div>
+
+      <h2>Données à extraire</h2>
+      <div class="checkboxes">
+        <label class="checkbox-label">
+          <input type="checkbox" id="extract-heures" checked>
+          <span class="checkmark"></span>
+          Heures d'activité
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="extract-missions" checked>
+          <span class="checkmark"></span>
+          Présences aux missions
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="extract-formations" checked>
+          <span class="checkmark"></span>
+          Formations
+        </label>
+      </div>
+
+      <h2>Format d'export</h2>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="format" value="json" checked>
+          <span class="radio-mark"></span>
+          JSON
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="format" value="csv">
+          <span class="radio-mark"></span>
+          CSV
+        </label>
+      </div>
+    </section>
+
+    <section id="action-section" class="section">
+      <button id="btn-extract" class="btn-primary" disabled>
+        Lancer l'extraction
+      </button>
+    </section>
+
+    <section id="progress-section" class="section hidden">
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="progress-info">
+          <span id="progress-percent">0%</span>
+          <span id="progress-detail">Initialisation...</span>
+        </div>
+      </div>
+      <p class="progress-hint">Vous pouvez fermer cette fenêtre, l'extraction continue en arrière-plan.</p>
+      <button id="btn-cancel" class="btn-secondary">
+        Annuler
+      </button>
+    </section>
+
+    <section id="result-section" class="section hidden">
+      <div class="result-success">
+        <span class="result-icon">✓</span>
+        <span id="result-message">Extraction terminée</span>
+      </div>
+      <button id="btn-download" class="btn-primary">
+        Télécharger le fichier
+      </button>
+      <button id="btn-reset" class="btn-secondary">
+        Nouvelle extraction
+      </button>
+    </section>
+
+    <section id="error-section" class="section hidden">
+      <div class="error-message">
+        <span class="error-icon">!</span>
+        <span id="error-text"></span>
+      </div>
+      <button id="btn-retry" class="btn-secondary">
+        Réessayer
+      </button>
+    </section>
+
+    <footer>
+      <p>Croix-Rouge française - UL Clamart</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

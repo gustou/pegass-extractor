@@ -1,0 +1,12 @@
+node_modules/
+web-ext-artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
