@@ -13,6 +13,9 @@ on:
 jobs:
   build-alpha:
     runs-on: ubuntu-latest
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v6
 
@@ -40,10 +43,7 @@ jobs:
         run: npm run build
 
       - name: Sign extension (Unlisted)
-        if: secrets.AMO_JWT_ISSUER != '' && secrets.AMO_JWT_SECRET != ''
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
         run: npm run sign
 
       - name: Upload Alpha Artifact

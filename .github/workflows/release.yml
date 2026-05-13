@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v6
 
@@ -39,10 +42,7 @@ jobs:
         run: npm run build
 
       - name: Sign extension (optional)
-        if: github.event_name == 'push' && secrets.AMO_JWT_ISSUER != '' && secrets.AMO_JWT_SECRET != ''
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        if: github.event_name == 'push' && env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
         run: npm run sign
 
       - name: Upload build artifact
