@@ -3,7 +3,7 @@
   "name": "Pegass Extractor",
   "version": "1.0.0",
   "description": "Extraction de statistiques des bénévoles depuis Pegass (Croix-Rouge française)",
-  "author": "UL Clamart",
+  "author": "Augustin (UL Clamart)",
   "browser_specific_settings": {
     "gecko": {
       "id": "pegass-extractor@ul-clamart.croix-rouge.fr",

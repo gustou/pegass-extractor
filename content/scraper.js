@@ -12,7 +12,6 @@ let shouldCancel = false;
 // Configuration de l'API Pegass
 const PEGASS_API_BASE = 'https://pegass.croix-rouge.fr/crf/rest';
 const REQUEST_DELAY = 300;
-const STRUCTURE_ID = '1160';
 
 // Cache des structures (pour éviter les requêtes en double)
 const structuresCache = {};
@@ -83,7 +82,10 @@ async function startExtraction(config) {
       throw new Error('Non connecté à Pegass');
     }
 
-    const structureId = connectionInfo.structureId || STRUCTURE_ID;
+    const structureId = connectionInfo.structureId;
+    if (!structureId) {
+      throw new Error('Impossible de déterminer votre Unité Locale depuis Pegass');
+    }
     const structureName = connectionInfo.uniteLocale;
 
     // Mettre en cache la structure locale
@@ -181,12 +183,12 @@ async function extractionParStructure(config, structureId, structureName) {
 }
 
 /**
- * Extraction hybride - Clamart complet + renforts externes
- * Combine les deux modes : stats complètes pour les membres Clamart,
+ * Extraction hybride - Membres locaux complet + renforts externes
+ * Combine les deux modes : stats complètes pour les membres locaux,
  * stats locales uniquement pour les renforts d'autres UL.
  */
 async function extractionHybride(config, structureId, structureName) {
-  // Étape 1: Récupérer les activités de Clamart (comme mode Structure)
+  // Étape 1: Récupérer les activités locales (comme mode Structure)
   sendProgress(5, 'Récupération des activités de la structure...');
   const activites = await fetchActivites(config.dateDebut, config.dateFin, structureId);
 
@@ -194,7 +196,7 @@ async function extractionHybride(config, structureId, structureName) {
 
   sendProgress(10, `${activites.length} activités trouvées`);
 
-  // Étape 2: Récupérer toutes les inscriptions aux activités Clamart
+  // Étape 2: Récupérer toutes les inscriptions aux activités locales
   sendProgress(15, 'Récupération des inscriptions...');
   const inscriptions = await fetchAllInscriptions(activites, structureId);
 
@@ -211,25 +213,25 @@ async function extractionHybride(config, structureId, structureName) {
 
   if (shouldCancel) return [];
 
-  // Étape 4: Séparer les membres Clamart des renforts externes
-  const membresClamart = {};
+  // Étape 4: Séparer les membres locaux des renforts externes
+  const membresLocaux = {};
   const renforts = {};
 
   for (const [userId, user] of Object.entries(utilisateurs)) {
-    // Vérifier si la structure de l'utilisateur correspond à Clamart
+    // Vérifier si la structure de l'utilisateur correspond à la locale
     const userStructureId = user.structure?.id;
     if (userStructureId == structureId) {
-      membresClamart[userId] = user;
+      membresLocaux[userId] = user;
     } else {
       renforts[userId] = user;
     }
   }
 
-  sendProgress(50, `${Object.keys(membresClamart).length} membres Clamart, ${Object.keys(renforts).length} renforts`);
+  sendProgress(50, `${Object.keys(membresLocaux).length} membres locaux, ${Object.keys(renforts).length} renforts`);
 
-  // Étape 5: Pour les membres Clamart, récupérer TOUTES leurs activités (locales + externes)
+  // Étape 5: Pour les membres locaux, récupérer TOUTES leurs activités (locales + externes)
   const benevoles = [];
-  const membresIds = Object.keys(membresClamart);
+  const membresIds = Object.keys(membresLocaux);
 
   const toutesLesSeances = {};
   const activitesARecuperer = new Set();
@@ -299,20 +301,20 @@ async function extractionHybride(config, structureId, structureName) {
 
   if (shouldCancel) return [];
 
-  // Étape 7: Agréger les données des membres Clamart (avec toutes leurs activités)
-  sendProgress(85, 'Agrégation membres Clamart...');
+  // Étape 7: Agréger les données des membres locaux (avec toutes leurs activités)
+  sendProgress(85, 'Agrégation membres locaux...');
 
   for (let i = 0; i < membresIds.length; i++) {
     const userId = membresIds[i];
-    const user = membresClamart[userId];
+    const user = membresLocaux[userId];
     const seances = toutesLesSeances[userId] || [];
 
     const benevole = aggregateBenevoleData(user, seances, activitesInfos, structureId, structureName);
-    benevole.renfort = false; // Membre Clamart
+    benevole.renfort = false; // Membre local
     benevoles.push(benevole);
   }
 
-  // Étape 8: Agréger les renforts (seulement leurs activités Clamart depuis inscriptions)
+  // Étape 8: Agréger les renforts (seulement leurs activités locales depuis inscriptions)
   sendProgress(90, 'Agrégation renforts...');
 
   const renfortsAggregated = aggregateRenforts(renforts, inscriptions, structureId, structureName);
@@ -362,7 +364,7 @@ function aggregateRenforts(utilisateurs, inscriptions, localStructureId, localSt
 
     if (heures > 0 && heures < 24) {
       benevole.heures.total += heures;
-      // Pour les renforts, les heures à Clamart comptent comme "locales" (de leur point de vue, c'est externe, mais pour nous c'est local)
+      // Pour les renforts, les heures dans cette UL comptent comme "locales" (de leur point de vue, c'est externe, mais pour nous c'est local)
       benevole.heures.locales += heures;
 
       const mois = inscription.debut.substring(0, 7);
@@ -383,7 +385,7 @@ function aggregateRenforts(utilisateurs, inscriptions, localStructureId, localSt
         heures: Math.round(heures * 100) / 100,
         statut: inscription.statut,
         role: inscription.role,
-        externe: false, // Pour eux c'est externe, mais pour nous c'est local (activité Clamart)
+        externe: false, // Pour eux c'est externe, mais pour nous c'est local (activité de l'UL)
         structure: localStructureName,
         structureId: localStructureId
       });

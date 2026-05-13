@@ -104,14 +104,6 @@ Le workflow peut aussi être lancé manuellement via l'onglet *Actions* (déclen
 - `storage` : Stockage local des paramètres
 - `host_permissions` : Accès à pegass.croix-rouge.fr
 
-## Configuration
-
-Pour changer l'ID de structure par défaut, éditez `content/scraper.js` :
-
-```javascript
-const STRUCTURE_ID = '1160'; // Votre ID de structure
-```
-
 ## Dépannage
 
 ### "Non connecté à Pegass"
@@ -126,6 +118,10 @@ const STRUCTURE_ID = '1160'; // Votre ID de structure
 ### Erreur de téléchargement
 - Vérifiez les popups ne sont pas bloqués
 - Rechargez l'extension et réessayez
+
+## Crédits
+
+Outil développé par **Augustin** pour l'**Unité Locale de Clamart** de la Croix-Rouge française.
 
 ## Licence
 
