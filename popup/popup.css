@@ -484,7 +484,32 @@ footer {
   border-top: 1px solid #eee;
 }
 
-footer p {
+.footer-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+#version-display {
   font-size: 11px;
+  font-weight: 600;
   color: #999;
+}
+
+.bug-link {
+  font-size: 11px;
+  color: #e30613;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.bug-link:hover {
+  text-decoration: underline;
+}
+
+footer p {
+  font-size: 10px;
+  color: #bbb;
 }

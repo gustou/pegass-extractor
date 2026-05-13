@@ -1,128 +1,72 @@
-# Pegass Extractor - Extension Firefox
+# Pegass Extractor
 
-Extension Firefox pour extraire les statistiques des bénévoles depuis Pegass.
+Extension Firefox pour extraire les statistiques des bénévoles depuis Pegass et les visualiser dans votre tableau de bord.
 
-## Installation (utilisateurs)
+## 🚀 Installation rapide
 
-### Méthode recommandée : télécharger le `.zip` depuis les Releases
+### 1. Téléchargement
+Allez sur la page **[Releases](../../releases)** et téléchargez la dernière version :
+- **Fichier `.xpi`** : Si disponible, c'est la version signée (installation permanente).
+- **Fichier `.zip`** : Version non signée (installation temporaire).
 
-1. Allez sur la page **[Releases](../../releases)** du dépôt et téléchargez le fichier `pegass-extractor-X.Y.Z.zip` de la dernière version.
-2. Ouvrez Firefox et allez à `about:debugging`.
-3. Cliquez sur **"Ce Firefox"** dans le menu de gauche.
-4. Cliquez sur **"Charger un module temporaire..."** et sélectionnez le `.zip` téléchargé (ou son `manifest.json` une fois le zip extrait).
+### 2. Installation dans Firefox
+1. Ouvrez Firefox et allez à l'adresse `about:debugging#/runtime/this-firefox`.
+2. Cliquez sur **"Charger un module temporaire..."**.
+3. Sélectionnez le fichier téléchargé.
 
-> Note : un module temporaire est désinstallé à la fermeture de Firefox. Pour une installation persistante non signée, utilisez **Firefox Developer Edition**, **Nightly** ou **ESR** avec `xpinstall.signatures.required` à `false` dans `about:config`. Firefox release refuse les extensions non signées en permanent.
+*Note : Pour une installation permanente sans passer par le store officiel, consultez la section dédiée dans la documentation développeur.*
 
-### Méthode développeur : charger directement le dossier source
+---
 
-1. Clonez le dépôt.
-2. Ouvrez Firefox et allez à `about:debugging`.
-3. Cliquez sur **"Ce Firefox"** puis **"Charger un module temporaire..."**.
-4. Sélectionnez le fichier `manifest.json` à la racine du dépôt.
+## 🛠️ Comment ça marche ?
 
-## Utilisation
+1. Connectez-vous à votre compte [Pegass](https://pegass.croix-rouge.fr).
+2. Cliquez sur l'icône de l'extension (Croix-Rouge) dans votre barre d'outils.
+3. Choisissez vos dates et le **mode d'extraction** souhaité.
+4. Cliquez sur **Lancer l'extraction**.
+5. Une fois terminé, téléchargez le fichier JSON.
+6. Glissez ce fichier dans votre [**Pegass Dashboard**](https://github.com/gustou/pegass-dashboard) pour voir vos graphiques et exports Excel.
 
-1. Connectez-vous à [Pegass](https://pegass.croix-rouge.fr)
-2. Cliquez sur l'icône de l'extension (croix rouge)
-3. Sélectionnez la période d'extraction
-4. Cliquez sur **"Lancer l'extraction"**
-5. Téléchargez le fichier JSON
+---
 
-### Que faire du JSON
+## 📊 Comprendre les modes d'extraction
 
-Glissez-le dans [**Pegass Dashboard**](https://github.com/gustou/pegass-dashboard) pour visualiser les statistiques (graphiques, top 10, export Excel/CSV).
+L'outil propose trois méthodes pour récupérer les données, selon vos besoins :
 
-## Structure
+| Mode | Description | Idéal pour... |
+| :--- | :--- | :--- |
+| **Par Structure** | Scanne toutes les activités créées par votre UL. | Comptabiliser l'activité réelle de votre structure, y compris les renforts venus d'ailleurs. |
+| **Par Bénévole** | Scanne le planning individuel de chacun de vos bénévoles. | Voir l'activité complète de vos membres, même quand ils vont aider dans d'autres UL. |
+| **Hybride** | Combine les deux méthodes ci-dessus. | Avoir une vision à 360° : l'activité totale de vos membres + l'aide apportée par les externes. |
 
-```
-.
-├── manifest.json         # Configuration Manifest V3
-├── package.json          # Scripts de build/lint (web-ext)
-├── popup/
-│   ├── popup.html        # Interface utilisateur
-│   ├── popup.css         # Styles (thème Croix-Rouge)
-│   └── popup.js          # Logique du popup
-├── content/
-│   └── scraper.js        # Script d'extraction via API Pegass
-├── background/
-│   └── background.js     # Service worker
-├── icons/
-│   ├── icon-48.svg
-│   └── icon-96.svg
-└── .github/workflows/
-    └── release.yml       # Build + release du .zip sur tag v*
-```
+> **Attention :** En raison des restrictions de sécurité de Pegass, il est impossible de lire le planning complet d'un bénévole qui n'appartient pas à votre structure. Le mode Hybride gère cela intelligemment en ne scannant le planning que pour vos membres locaux.
 
-## Développement et packaging
+---
 
-L'extension utilise [`web-ext`](https://github.com/mozilla/web-ext) (outil officiel Mozilla) pour le lint et la création du paquet.
+## ❓ FAQ / Dépannage
 
-### Pré-requis
+### "Ce module n'a pas pu être installé car il n'a pas été vérifié"
+C'est une sécurité de Firefox pour les extensions hors store. Utilisez impérativement la page `about:debugging` pour charger le module temporairement. Pour une installation définitive, référez-vous au fichier `CONTRIBUTING.md`.
 
-- Node.js 20+ et npm
-- Installer les dépendances : `npm install`
+### Pourquoi l'extraction est-elle un peu lente ?
+L'extension imite un comportement humain pour ne pas être bloquée par les serveurs de la Croix-Rouge. Elle attend environ 0.3 seconde entre chaque requête. Pour une UL de 100 bénévoles sur un an, cela peut prendre 1 à 2 minutes.
 
-### Commandes disponibles
+### Mes renforts externes n'ont pas toutes leurs heures, pourquoi ?
+C'est normal. L'API Pegass nous interdit de voir ce qu'un bénévole externe fait en dehors de votre propre structure. Vous ne verrez donc que les heures qu'il a effectuées chez vous.
 
-| Commande | Description |
-|----------|-------------|
-| `npm run lint` | Valide `manifest.json` et signale les problèmes courants (permissions inutilisées, etc.) |
-| `npm run build` | Crée `web-ext-artifacts/pegass-extractor-<version>.zip` |
-| `npm run start` | Lance une instance de Firefox avec l'extension préchargée (rechargement automatique au changement de fichier) |
+### Mes données sont-elles sécurisées ?
+Oui. L'extraction se fait entièrement localement sur votre ordinateur. Aucune donnée n'est envoyée vers un serveur externe. Le fichier JSON généré reste sur votre machine.
 
-### Publier une nouvelle version
+### Puis-je exporter vers Excel ?
+L'extension génère un fichier JSON optimisé pour le [Pegass Dashboard](https://github.com/gustou/pegass-dashboard). C'est depuis ce tableau de bord que vous pourrez exporter vos données proprement vers Excel ou CSV.
 
-1. Mettez à jour le champ `version` dans [`manifest.json`](manifest.json) **et** dans [`package.json`](package.json) (utilisez la même valeur).
-2. Commitez ces changements.
-3. Créez et poussez un tag `v<version>` :
+---
 
-   ```bash
-   git tag v1.1.0
-   git push origin v1.1.0
-   ```
+## ✍️ Crédits
 
-4. Le workflow GitHub Actions [`release.yml`](.github/workflows/release.yml) :
-   - vérifie que la version du tag correspond à celle du `manifest.json`,
-   - exécute `web-ext lint`,
-   - construit le `.zip`,
-   - publie une **Release GitHub** avec le `.zip` en pièce jointe et des notes générées automatiquement.
+Outil développé avec ❤️ par **Augustin** pour l'**Unité Locale de Clamart** (Croix-Rouge française).
 
-Le workflow peut aussi être lancé manuellement via l'onglet *Actions* (déclencheur `workflow_dispatch`) pour produire un artefact de build sans créer de release.
+## 📄 Licence
 
-## API Pegass utilisées
-
-| Endpoint | Usage |
-|----------|-------|
-| `/crf/rest/utilisateur` | Vérification connexion |
-| `/crf/rest/activite` | Liste des activités |
-| `/crf/rest/seance/{id}/inscription` | Inscriptions |
-| `/crf/rest/utilisateur/{id}` | Détails bénévole |
-
-## Permissions
-
-- `activeTab` : Accès à l'onglet actif
-- `storage` : Stockage local des paramètres
-- `host_permissions` : Accès à pegass.croix-rouge.fr
-
-## Dépannage
-
-### "Non connecté à Pegass"
-- Vérifiez que vous êtes sur pegass.croix-rouge.fr
-- Vérifiez que vous êtes authentifié
-- Rechargez l'extension dans about:debugging
-
-### Extraction lente
-- Normal : l'extension respecte un délai entre les requêtes
-- Attendez la fin de la progression
-
-### Erreur de téléchargement
-- Vérifiez les popups ne sont pas bloqués
-- Rechargez l'extension et réessayez
-
-## Crédits
-
-Outil développé par **Augustin** pour l'**Unité Locale de Clamart** de la Croix-Rouge française.
-
-## Licence
-
-[MIT](LICENSE).
+Ce projet est sous licence [MIT](LICENSE).
+Documentation technique pour les développeurs : [CONTRIBUTING.md](CONTRIBUTING.md).

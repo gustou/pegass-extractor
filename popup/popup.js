@@ -32,6 +32,7 @@ const elements = {
   progressDetail: document.getElementById('progress-detail'),
   resultMessage: document.getElementById('result-message'),
   errorText: document.getElementById('error-text'),
+  versionDisplay: document.getElementById('version-display'),
   // Nouvelle section dernière extraction
   lastExtractionSection: document.getElementById('last-extraction-section'),
   lastDate: document.getElementById('last-date'),
@@ -46,12 +47,21 @@ const elements = {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  setVersion();
   setDefaultDates();
   await getCurrentTab();
   await checkConnection();
   await checkLastExtraction();
   await checkExtractionState();
   setupEventListeners();
+}
+
+/**
+ * Affiche la version de l'extension
+ */
+function setVersion() {
+  const manifest = browser.runtime.getManifest();
+  elements.versionDisplay.textContent = `v${manifest.version}`;
 }
 
 /**
