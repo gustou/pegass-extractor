@@ -135,7 +135,7 @@ async function startExtraction(config) {
           extractFormations: !!config.extractFormations,
           format: config.format || 'json'
         },
-        version: '1.2.0'
+        version: '1.2.1'
       },
       benevoles: benevoles,
       stats: {

@@ -31,8 +31,12 @@ jobs:
         id: versioning
         run: |
           BASE_VERSION=$(node -p "require('./manifest.json').version")
-          # AMO : uniquement 1–4 segments numériques séparés par des points (pas de lettres). 4e segment = run GitHub.
-          ALPHA_VERSION="${BASE_VERSION}.${GITHUB_RUN_NUMBER}"
+          # AMO : 1–4 segments numériques uniquement. Éviter « version déjà existante » :
+          # - ne pas réutiliser BASE.RUN_NUMBER (re-run CI = même numéro).
+          # - 3e segment = RUN_NUMBER*10 + RUN_ATTEMPT (re-run incrémente RUN_ATTEMPT).
+          IFS='.' read -r MAJ MIN _ <<< "${BASE_VERSION}"
+          PATCH_ID=$((GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
+          ALPHA_VERSION="${MAJ}.${MIN}.${PATCH_ID}"
           echo "version=$ALPHA_VERSION" >> $GITHUB_OUTPUT
           
           # Mise à jour des fichiers manifest et package
