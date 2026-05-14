@@ -6,6 +6,80 @@
 // État local
 let currentTabId = null;
 let progressInterval = null;
+/** @type {string|null} id du bouton preset actif (data-preset) */
+let activePresetId = null;
+
+/**
+ * Formate une date en YYYY-MM-DD (fuseau local)
+ */
+function formatLocalYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function startOfCalendarMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function endOfCalendarMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+function syncPresetButtons() {
+  document.querySelectorAll('.period-preset').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.preset === activePresetId);
+  });
+}
+
+function clearActivePreset() {
+  activePresetId = null;
+  syncPresetButtons();
+}
+
+/**
+ * Applique une période prédéfinie et met à jour les champs date
+ */
+function applyPreset(presetId) {
+  const now = new Date();
+  let start;
+  let end;
+
+  switch (presetId) {
+    case 'month-this': {
+      const endMonth = formatLocalYMD(endOfCalendarMonth(now));
+      const today = formatLocalYMD(now);
+      start = formatLocalYMD(startOfCalendarMonth(now));
+      end = today < endMonth ? today : endMonth;
+      break;
+    }
+    case 'month-prev': {
+      const firstPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastPrev = new Date(now.getFullYear(), now.getMonth(), 0);
+      start = formatLocalYMD(firstPrev);
+      end = formatLocalYMD(lastPrev);
+      break;
+    }
+    case 'year-this':
+      start = `${now.getFullYear()}-01-01`;
+      end = formatLocalYMD(now);
+      break;
+    case 'year-prev': {
+      const y = now.getFullYear() - 1;
+      start = `${y}-01-01`;
+      end = `${y}-12-31`;
+      break;
+    }
+    default:
+      return;
+  }
+
+  elements.dateDebut.value = start;
+  elements.dateFin.value = end;
+  activePresetId = presetId;
+  syncPresetButtons();
+}
 
 // Éléments du DOM
 const elements = {
@@ -40,7 +114,8 @@ const elements = {
   lastPeriode: document.getElementById('last-periode'),
   btnDownloadLast: document.getElementById('btn-download-last'),
   btnDownloadLastCsv: document.getElementById('btn-download-last-csv'),
-  btnDeleteLast: document.getElementById('btn-delete-last')
+  btnDeleteLast: document.getElementById('btn-delete-last'),
+  btnUpdateLast: document.getElementById('btn-update-last')
 };
 
 // Initialisation
@@ -48,7 +123,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setVersion();
-  setDefaultDates();
+  applyPreset('year-this');
   await getCurrentTab();
   await checkConnection();
   await checkLastExtraction();
@@ -73,19 +148,17 @@ async function getCurrentTab() {
 }
 
 /**
- * Définit les dates par défaut (année en cours)
- */
-function setDefaultDates() {
-  const now = new Date();
-  const year = now.getFullYear();
-  elements.dateDebut.value = `${year}-01-01`;
-  elements.dateFin.value = now.toISOString().split('T')[0];
-}
-
-/**
  * Configure les écouteurs d'événements
  */
 function setupEventListeners() {
+  document.querySelectorAll('.period-preset').forEach((btn) => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+  elements.dateDebut.addEventListener('input', clearActivePreset);
+  elements.dateFin.addEventListener('input', clearActivePreset);
+  elements.dateDebut.addEventListener('change', clearActivePreset);
+  elements.dateFin.addEventListener('change', clearActivePreset);
+
   elements.btnExtract.addEventListener('click', startExtraction);
   elements.btnCancel.addEventListener('click', cancelExtraction);
   elements.btnDownload.addEventListener('click', () => downloadData('json'));
@@ -95,6 +168,47 @@ function setupEventListeners() {
   elements.btnDownloadLast.addEventListener('click', () => downloadData('json'));
   elements.btnDownloadLastCsv.addEventListener('click', () => downloadData('csv'));
   elements.btnDeleteLast.addEventListener('click', deleteLastExtraction);
+  elements.btnUpdateLast.addEventListener('click', startUpdateLastExtraction);
+}
+
+/**
+ * Active ou désactive le bouton de mise à jour selon les données et Pegass
+ */
+async function refreshUpdateLastButton() {
+  const btn = elements.btnUpdateLast;
+  if (!btn) return;
+
+  if (elements.lastExtractionSection.classList.contains('hidden')) {
+    btn.disabled = true;
+    return;
+  }
+
+  let hasSnap = false;
+  try {
+    const state = await browser.runtime.sendMessage({ action: 'getExtractionState' });
+    hasSnap = !!(state.data?.metadata?.config_snapshot);
+  } catch (error) {
+    console.error('Erreur état mise à jour:', error);
+  }
+
+  btn.disabled = elements.btnExtract.disabled || !hasSnap;
+  btn.title = hasSnap
+    ? 'Re-extraire depuis la date de la dernière extraction jusqu’à aujourd’hui, puis fusionner (missions déjà présentes conservées une fois).'
+    : 'Lancez d’abord une extraction complète avec cette version de l’extension pour activer la mise à jour.';
+}
+
+/**
+ * Met à jour la dernière extraction (delta + fusion côté arrière-plan)
+ */
+async function startUpdateLastExtraction() {
+  showSection('progress');
+  updateProgress(0, 'Mise à jour...');
+  startProgressPolling();
+
+  browser.runtime.sendMessage({
+    action: 'updateLastExtraction',
+    tabId: currentTabId
+  });
 }
 
 /**
@@ -106,6 +220,8 @@ async function checkConnection() {
 
     if (!tab.url || !tab.url.includes('pegass.croix-rouge.fr')) {
       updateConnectionStatus('disconnected', 'Ouvrez Pegass pour commencer');
+      elements.btnExtract.disabled = true;
+      await refreshUpdateLastButton();
       return;
     }
 
@@ -122,11 +238,15 @@ async function checkConnection() {
       elements.btnExtract.disabled = false;
     } else {
       updateConnectionStatus('disconnected', 'Connectez-vous à Pegass');
+      elements.btnExtract.disabled = true;
     }
   } catch (error) {
     console.error('Erreur de vérification:', error);
     updateConnectionStatus('error', 'Erreur de communication');
+    elements.btnExtract.disabled = true;
   }
+
+  await refreshUpdateLastButton();
 }
 
 /**
@@ -173,6 +293,7 @@ function displayLastExtraction(data) {
   }
 
   elements.lastExtractionSection.classList.remove('hidden');
+  void refreshUpdateLastButton();
 }
 
 /**
@@ -184,6 +305,7 @@ async function deleteLastExtraction() {
   try {
     await browser.runtime.sendMessage({ action: 'deleteLastExtraction' });
     elements.lastExtractionSection.classList.add('hidden');
+    void refreshUpdateLastButton();
   } catch (error) {
     console.error('Erreur suppression:', error);
   }
@@ -257,7 +379,10 @@ function startProgressPolling() {
         clearInterval(progressInterval);
         progressInterval = null;
 
-        if (state.hasData) {
+        if (state.lastError) {
+          elements.errorText.textContent = state.lastError;
+          showSection('error');
+        } else if (state.hasData) {
           elements.resultMessage.textContent =
             `Extraction terminée: ${state.data.benevoles.length} bénévoles`;
           showSection('result');

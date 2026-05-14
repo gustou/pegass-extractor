@@ -128,6 +128,13 @@ async function startExtraction(config) {
           debut: config.dateDebut,
           fin: config.dateFin
         },
+        config_snapshot: {
+          mode: config.mode || 'structure',
+          extractHeures: !!config.extractHeures,
+          extractMissions: !!config.extractMissions,
+          extractFormations: !!config.extractFormations,
+          format: config.format || 'json'
+        },
         version: '1.3.0'
       },
       benevoles: benevoles,

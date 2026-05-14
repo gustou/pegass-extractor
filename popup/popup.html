@@ -45,6 +45,10 @@
           <span id="last-periode" class="info-value">-</span>
         </div>
       </div>
+      <button type="button" id="btn-update-last" class="btn-secondary btn-small btn-update-last" disabled
+        title="Disponible après une extraction complète avec cette version de l’extension.">
+        Mettre à jour (événements récents)
+      </button>
       <div class="last-extraction-actions">
         <button id="btn-download-last" class="btn-primary btn-small">
           Télécharger JSON
@@ -58,7 +62,7 @@
     <section id="config-section" class="section">
       <h2>Nouvelle extraction</h2>
 
-      <h2>Mode d'extraction</h2>
+      <h3>Mode d'extraction</h3>
       <div class="radio-group mode-group">
         <label class="radio-label">
           <input type="radio" name="mode" value="structure">
@@ -86,7 +90,13 @@
         </label>
       </div>
 
-      <h2>Période</h2>
+      <h3>Période</h3>
+      <div class="period-presets" role="group" aria-label="Périodes prédéfinies">
+        <button type="button" class="period-preset" data-preset="month-this">Ce mois-ci</button>
+        <button type="button" class="period-preset" data-preset="month-prev">Mois précédent</button>
+        <button type="button" class="period-preset" data-preset="year-this">Année en cours</button>
+        <button type="button" class="period-preset" data-preset="year-prev">Année précédente</button>
+      </div>
       <div class="date-range">
         <div class="date-field">
           <label for="date-debut">Du</label>
@@ -98,7 +108,7 @@
         </div>
       </div>
 
-      <h2>Données à extraire</h2>
+      <h3>Données à extraire</h3>
       <div class="checkboxes">
         <label class="checkbox-label">
           <input type="checkbox" id="extract-heures" checked>
@@ -117,7 +127,7 @@
         </label>
       </div>
 
-      <h2>Format d'export</h2>
+      <h3>Format d'export</h3>
       <div class="radio-group">
         <label class="radio-label">
           <input type="radio" name="format" value="json" checked>

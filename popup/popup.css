@@ -67,6 +67,24 @@ h1 {
   margin-bottom: 8px;
 }
 
+#config-section > h2 {
+  margin-bottom: 4px;
+}
+
+#config-section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 14px;
+  margin-bottom: 8px;
+}
+
+#config-section h3:first-of-type {
+  margin-top: 4px;
+}
+
 .hidden {
   display: none !important;
 }
@@ -152,6 +170,38 @@ h1 {
 .date-field input:focus {
   outline: none;
   border-color: #e30613;
+}
+
+/* Périodes prédéfinies */
+.period-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.period-preset {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  background: #f8f9fa;
+  font-size: 11px;
+  font-family: inherit;
+  color: #444;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.period-preset:hover {
+  border-color: #ccc;
+  background: #fff;
+}
+
+.period-preset.active {
+  border-color: #e30613;
+  background: #fff5f5;
+  color: #c70512;
+  font-weight: 600;
 }
 
 /* Checkboxes */
@@ -451,6 +501,11 @@ h1 {
 .info-value {
   font-weight: 500;
   color: #333;
+}
+
+.btn-update-last {
+  width: 100%;
+  margin-bottom: 8px;
 }
 
 .last-extraction-actions {
