@@ -31,8 +31,8 @@ jobs:
         id: versioning
         run: |
           BASE_VERSION=$(node -p "require('./manifest.json').version")
-          # On ajoute le numéro de run pour garantir une version unique pour Mozilla
-          ALPHA_VERSION="${BASE_VERSION}.${GITHUB_RUN_NUMBER}"
+          # Suffixe type Toolkit (ex. 1.1.0a1234) : unique par run, accepté par AMO (éviter 4 segments 1.0.1.N)
+          ALPHA_VERSION="${BASE_VERSION}a${GITHUB_RUN_NUMBER}"
           echo "version=$ALPHA_VERSION" >> $GITHUB_OUTPUT
           
           # Mise à jour des fichiers manifest et package
