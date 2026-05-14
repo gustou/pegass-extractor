@@ -54,5 +54,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pegass-extractor-alpha-${{ steps.versioning.outputs.version }}
-          path: web-ext-artifacts/*.{zip,xpi}
+          # Pas de *.{zip,xpi} : @actions/glob ne fait pas l’expansion type shell.
+          path: web-ext-artifacts
           if-no-files-found: error

@@ -49,14 +49,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pegass-extractor-extension
-          path: web-ext-artifacts/*.{zip,xpi}
+          path: web-ext-artifacts
           if-no-files-found: error
 
       - name: Publish GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v3
         with:
-          files: web-ext-artifacts/*.{zip,xpi}
+          files: web-ext-artifacts/*
           generate_release_notes: true
 
 
