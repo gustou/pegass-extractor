@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Pegass Extractor",
-  "version": "1.1.0",
+  "name": "Pegass Extractor UL",
+  "version": "1.2.0",
   "description": "Extraction de statistiques des bénévoles depuis Pegass (Croix-Rouge française)",
   "author": "Augustin (UL Clamart)",
   "browser_specific_settings": {
     "gecko": {
-      "id": "pegass-extractor@ul-clamart.croix-rouge.fr",
+      "id": "{3e1e8eed-15c8-41aa-bdff-5044d6e091f7}",
       "strict_min_version": "115.0",
       "data_collection_permissions": {
         "required": ["none"]
@@ -31,7 +31,7 @@
       "48": "icons/icon-48.svg",
       "96": "icons/icon-96.svg"
     },
-    "default_title": "Pegass Extractor",
+    "default_title": "Pegass Extractor UL",
     "default_popup": "popup/popup.html"
   },
   "background": {
