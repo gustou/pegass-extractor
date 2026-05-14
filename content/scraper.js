@@ -59,6 +59,34 @@ function pickStructureFromProfile(user) {
 }
 
 /**
+ * Extrait un objet « utilisateur » depuis les réponses API Pegass (profil, gestion des droits, page Spring).
+ */
+function unwrapUserPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+
+  const isSpringPage =
+    Array.isArray(body.content) &&
+    (Object.prototype.hasOwnProperty.call(body, 'totalElements') ||
+      Object.prototype.hasOwnProperty.call(body, 'totalPages') ||
+      Object.prototype.hasOwnProperty.call(body, 'numberOfElements'));
+
+  if (isSpringPage) {
+    if (body.content.length === 0) {
+      return null;
+    }
+    return body.content[0];
+  }
+
+  if (body.utilisateur && typeof body.utilisateur === 'object') {
+    return body.utilisateur;
+  }
+
+  return body;
+}
+
+/**
  * Écoute les messages du popup/background
  */
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -83,36 +111,53 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function checkConnection() {
   try {
-    const response = await fetch(`${PEGASS_API_BASE}/utilisateur`, {
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' }
-    });
+    const urls = [
+      `${PEGASS_API_BASE}/gestiondesdroits`,
+      `${PEGASS_API_BASE}/utilisateur`
+    ];
 
-    if (response.ok) {
-      let user = await response.json();
-      let picked = pickStructureFromProfile(user);
+    let user = null;
 
-      if (!picked.id && user.id) {
-        try {
-          const fullUser = await fetchUtilisateur(user.id);
-          picked = pickStructureFromProfile({ ...user, ...fullUser });
-        } catch (e) {
-          console.warn('Pegass Extractor: profil utilisateur détaillé indisponible', e);
-        }
+    for (const url of urls) {
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) {
+        continue;
       }
-
-      const uniteLocale =
-        picked.libelle || user.structure?.libelle || 'Connecté';
-
-      return {
-        connected: true,
-        uniteLocale,
-        userId: user.id,
-        structureId: picked.id
-      };
+      const body = await response.json();
+      const candidate = unwrapUserPayload(body);
+      if (candidate && candidate.id != null && candidate.id !== '') {
+        user = candidate;
+        break;
+      }
     }
 
-    return { connected: false };
+    if (!user) {
+      return { connected: false };
+    }
+
+    let picked = pickStructureFromProfile(user);
+
+    if (!picked.id && user.id) {
+      try {
+        const fullUser = await fetchUtilisateur(user.id);
+        picked = pickStructureFromProfile({ ...user, ...fullUser });
+      } catch (e) {
+        console.warn('Pegass Extractor: profil utilisateur détaillé indisponible', e);
+      }
+    }
+
+    const uniteLocale =
+      picked.libelle || user.structure?.libelle || 'Connecté';
+
+    return {
+      connected: true,
+      uniteLocale,
+      userId: user.id,
+      structureId: picked.id
+    };
   } catch (error) {
     console.error('Erreur vérification connexion:', error);
     return { connected: false };
@@ -191,7 +236,7 @@ async function startExtraction(config) {
           extractFormations: !!config.extractFormations,
           format: config.format || 'json'
         },
-        version: '1.2.2'
+        version: '1.2.3'
       },
       benevoles: benevoles,
       stats: {
