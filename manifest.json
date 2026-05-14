@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pegass Extractor UL",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Extraction de statistiques des bénévoles depuis Pegass (Croix-Rouge française)",
   "author": "Augustin (UL Clamart)",
   "browser_specific_settings": {

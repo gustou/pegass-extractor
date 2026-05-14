@@ -17,6 +17,48 @@ const REQUEST_DELAY = 300;
 const structuresCache = {};
 
 /**
+ * Déduit l'UL (id + libellé) depuis un objet utilisateur Pegass (champs variables selon versions / endpoints).
+ */
+function pickStructureFromProfile(user) {
+  if (!user || typeof user !== 'object') {
+    return { id: null, libelle: null };
+  }
+
+  const blocks = [
+    user.structure,
+    user.structurePrincipale,
+    user.uniteLocale,
+    user.ul,
+    user.utilisateur?.structure
+  ];
+
+  for (const block of blocks) {
+    if (!block || typeof block !== 'object') continue;
+    const rawId = block.id ?? block.structureId ?? block.ulId;
+    const libelle = block.libelle ?? block.nom ?? block.label;
+    if (rawId != null && rawId !== '') {
+      return { id: String(rawId), libelle: libelle || null };
+    }
+  }
+
+  const rootId =
+    user.structureId ??
+    user.uniteLocaleId ??
+    user.ulId ??
+    user.defaultStructureId;
+  if (rootId != null && rootId !== '') {
+    const libelle =
+      user.structureLibelle ??
+      user.uniteLocaleLibelle ??
+      user.libelleStructure ??
+      null;
+    return { id: String(rootId), libelle: libelle || null };
+  }
+
+  return { id: null, libelle: null };
+}
+
+/**
  * Écoute les messages du popup/background
  */
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -47,12 +89,26 @@ async function checkConnection() {
     });
 
     if (response.ok) {
-      const user = await response.json();
+      let user = await response.json();
+      let picked = pickStructureFromProfile(user);
+
+      if (!picked.id && user.id) {
+        try {
+          const fullUser = await fetchUtilisateur(user.id);
+          picked = pickStructureFromProfile({ ...user, ...fullUser });
+        } catch (e) {
+          console.warn('Pegass Extractor: profil utilisateur détaillé indisponible', e);
+        }
+      }
+
+      const uniteLocale =
+        picked.libelle || user.structure?.libelle || 'Connecté';
+
       return {
         connected: true,
-        uniteLocale: user.structure?.libelle || 'Connecté',
+        uniteLocale,
         userId: user.id,
-        structureId: user.structure?.id
+        structureId: picked.id
       };
     }
 
@@ -135,7 +191,7 @@ async function startExtraction(config) {
           extractFormations: !!config.extractFormations,
           format: config.format || 'json'
         },
-        version: '1.2.1'
+        version: '1.2.2'
       },
       benevoles: benevoles,
       stats: {
