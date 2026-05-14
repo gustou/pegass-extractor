@@ -31,8 +31,8 @@ jobs:
         id: versioning
         run: |
           BASE_VERSION=$(node -p "require('./manifest.json').version")
-          # Suffixe type Toolkit (ex. 1.1.0a1234) : unique par run, accepté par AMO (éviter 4 segments 1.0.1.N)
-          ALPHA_VERSION="${BASE_VERSION}a${GITHUB_RUN_NUMBER}"
+          # AMO : uniquement 1–4 segments numériques séparés par des points (pas de lettres). 4e segment = run GitHub.
+          ALPHA_VERSION="${BASE_VERSION}.${GITHUB_RUN_NUMBER}"
           echo "version=$ALPHA_VERSION" >> $GITHUB_OUTPUT
           
           # Mise à jour des fichiers manifest et package
