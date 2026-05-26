@@ -34,11 +34,19 @@ Conserver le lien d'installation fourni par le store pour le partage interne (UL
 
 Incrémenter `version` dans `manifest.json` (Firefox) et `manifest.chrome.json` (synchronisée automatiquement au build Chrome depuis `manifest.json`). Reconstruire, téléverser le nouveau zip dans le dashboard, republier.
 
+## Icônes
+
+Chrome affiche une icône générique si seuls des SVG sont déclarés. Le manifest Chrome référence des **PNG** (`icons/icon-16.png` … `icon-128.png`), générés depuis `icon-96.svg` :
+
+```bash
+./scripts/generate-icons.sh
+```
+
 ## Fichiers spécifiques Chrome
 
 | Fichier | Rôle |
 |---------|------|
-| `manifest.chrome.json` | Manifest MV3 avec `service_worker` |
+| `manifest.chrome.json` | Manifest MV3 avec `service_worker` et icônes PNG |
 | `lib/browser-shim.js` | Shim `browser` pour content scripts et popup |
 | `lib/browser-shim.mjs` | Shim `browser` pour le service worker (module) |
 | `scripts/build-chrome.mjs` | Assemble `chrome-dist/` et le zip CWS |
