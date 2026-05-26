@@ -5,6 +5,12 @@
  * v1.2 - Ajout différenciation activités locales/externes
  */
 
+import '../lib/browser-shim.mjs';
+import {
+  aggregateDataFromInscriptions,
+  buildEvenementsFromActivites
+} from '../lib/extraction-core.mjs';
+
 // État du scraper
 let isExtracting = false;
 let shouldCancel = false;
@@ -193,13 +199,14 @@ async function startExtraction(config) {
     structuresCache[structureId] = structureName;
 
     let benevoles;
+    let evenements;
 
     if (config.mode === 'benevole') {
-      benevoles = await extractionParBenevole(config, structureId, structureName);
+      ({ benevoles, evenements } = await extractionParBenevole(config, structureId, structureName));
     } else if (config.mode === 'hybride') {
-      benevoles = await extractionHybride(config, structureId, structureName);
+      ({ benevoles, evenements } = await extractionHybride(config, structureId, structureName));
     } else {
-      benevoles = await extractionParStructure(config, structureId, structureName);
+      ({ benevoles, evenements } = await extractionParStructure(config, structureId, structureName));
     }
 
     if (shouldCancel) return { success: false, error: 'Extraction annulée' };
@@ -236,15 +243,18 @@ async function startExtraction(config) {
           extractFormations: !!config.extractFormations,
           format: config.format || 'json'
         },
-        version: '1.2.3'
+        version: '1.3.0'
       },
       benevoles: benevoles,
+      evenements: evenements,
       stats: {
         total_benevoles: benevoles.length,
         total_heures: Math.round((heuresLocales + heuresExternes) * 100) / 100,
         heures_locales: Math.round(heuresLocales * 100) / 100,
         heures_externes: Math.round(heuresExternes * 100) / 100,
-        total_missions: benevoles.reduce((sum, b) => sum + b.missions.length, 0)
+        total_missions: benevoles.reduce((sum, b) => sum + b.missions.length, 0),
+        total_evenements: evenements.length,
+        evenements_sans_inscription: evenements.filter(e => (e.inscriptions_count || 0) === 0).length
       }
     };
 
@@ -260,6 +270,10 @@ async function startExtraction(config) {
   }
 }
 
+function emptyExtractionResult() {
+  return { benevoles: [], evenements: [] };
+}
+
 /**
  * Extraction par structure (mode actuel)
  */
@@ -267,16 +281,24 @@ async function extractionParStructure(config, structureId, structureName) {
   sendProgress(5, 'Récupération des activités de la structure...');
   const activites = await fetchActivites(config.dateDebut, config.dateFin, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   sendProgress(10, `${activites.length} activités trouvées`);
 
   sendProgress(15, 'Récupération des inscriptions...');
-  const inscriptions = await fetchAllInscriptions(activites, structureId);
+  const { inscriptions, inscriptionCountsBySeanceId } = await fetchAllInscriptions(activites, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
-  sendProgress(50, `${inscriptions.length} inscriptions trouvées`);
+  const evenements = buildEvenementsFromActivites(
+    activites,
+    structureId,
+    structureName,
+    inscriptionCountsBySeanceId,
+    structuresCache
+  );
+
+  sendProgress(50, `${inscriptions.length} inscriptions, ${evenements.length} événements`);
 
   const userIds = [...new Set(inscriptions.map(i => i.utilisateur?.id).filter(Boolean))];
   sendProgress(55, `${userIds.length} bénévoles identifiés`);
@@ -284,10 +306,11 @@ async function extractionParStructure(config, structureId, structureName) {
   sendProgress(60, 'Récupération des détails des bénévoles...');
   const utilisateurs = await fetchAllUtilisateurs(userIds);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   sendProgress(90, 'Agrégation des données...');
-  return aggregateDataFromInscriptions(utilisateurs, inscriptions, structureId, structureName);
+  const benevoles = aggregateDataFromInscriptions(utilisateurs, inscriptions, structureId, structureName);
+  return { benevoles, evenements };
 }
 
 /**
@@ -300,17 +323,25 @@ async function extractionHybride(config, structureId, structureName) {
   sendProgress(5, 'Récupération des activités de la structure...');
   const activites = await fetchActivites(config.dateDebut, config.dateFin, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   sendProgress(10, `${activites.length} activités trouvées`);
 
   // Étape 2: Récupérer toutes les inscriptions aux activités locales
   sendProgress(15, 'Récupération des inscriptions...');
-  const inscriptions = await fetchAllInscriptions(activites, structureId);
+  const { inscriptions, inscriptionCountsBySeanceId } = await fetchAllInscriptions(activites, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
-  sendProgress(40, `${inscriptions.length} inscriptions trouvées`);
+  const evenements = buildEvenementsFromActivites(
+    activites,
+    structureId,
+    structureName,
+    inscriptionCountsBySeanceId,
+    structuresCache
+  );
+
+  sendProgress(40, `${inscriptions.length} inscriptions, ${evenements.length} événements`);
 
   // Étape 3: Récupérer les détails de tous les utilisateurs
   const userIds = [...new Set(inscriptions.map(i => i.utilisateur?.id).filter(Boolean))];
@@ -319,7 +350,7 @@ async function extractionHybride(config, structureId, structureName) {
   sendProgress(45, 'Récupération des détails des bénévoles...');
   const utilisateurs = await fetchAllUtilisateurs(userIds);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   // Étape 4: Séparer les membres locaux des renforts externes
   const membresLocaux = {};
@@ -369,7 +400,7 @@ async function extractionHybride(config, structureId, structureName) {
     await delay(REQUEST_DELAY);
   }
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   // Étape 6: Récupérer les infos de structure pour chaque activité unique
   sendProgress(72, 'Récupération des structures des activités...');
@@ -407,7 +438,7 @@ async function extractionHybride(config, structureId, structureName) {
     await delay(REQUEST_DELAY / 2);
   }
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   // Étape 7: Agréger les données des membres locaux (avec toutes leurs activités)
   sendProgress(85, 'Agrégation membres locaux...');
@@ -436,7 +467,7 @@ async function extractionHybride(config, structureId, structureName) {
 
   sendProgress(95, `${benevoles.length} bénévoles traités`);
 
-  return benevoles;
+  return { benevoles, evenements };
 }
 
 /**
@@ -529,12 +560,21 @@ async function extractionParBenevole(config, structureId, structureName) {
   sendProgress(5, 'Identification des bénévoles de la structure...');
   const activites = await fetchActivites(config.dateDebut, config.dateFin, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   sendProgress(15, 'Récupération des inscriptions locales...');
-  const inscriptionsLocales = await fetchAllInscriptions(activites, structureId);
+  const { inscriptions: inscriptionsLocales, inscriptionCountsBySeanceId } =
+    await fetchAllInscriptions(activites, structureId);
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
+
+  const evenements = buildEvenementsFromActivites(
+    activites,
+    structureId,
+    structureName,
+    inscriptionCountsBySeanceId,
+    structuresCache
+  );
 
   const userIds = [...new Set(inscriptionsLocales.map(i => i.utilisateur?.id).filter(Boolean))];
   sendProgress(25, `${userIds.length} bénévoles identifiés`);
@@ -573,7 +613,7 @@ async function extractionParBenevole(config, structureId, structureName) {
     await delay(REQUEST_DELAY);
   }
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   // Étape 3: Récupérer les infos de structure pour chaque activité unique
   sendProgress(65, 'Récupération des structures des activités...');
@@ -611,7 +651,7 @@ async function extractionParBenevole(config, structureId, structureName) {
     await delay(REQUEST_DELAY / 2); // Plus rapide car moins de données
   }
 
-  if (shouldCancel) return [];
+  if (shouldCancel) return emptyExtractionResult();
 
   // Étape 4: Récupérer les détails de chaque bénévole et agréger
   sendProgress(82, 'Agrégation des données...');
@@ -638,7 +678,7 @@ async function extractionParBenevole(config, structureId, structureName) {
 
   benevoles.sort((a, b) => b.heures.total - a.heures.total);
 
-  return benevoles;
+  return { benevoles, evenements };
 }
 
 /**
@@ -805,6 +845,7 @@ async function fetchActivites(dateDebut, dateFin, structureId) {
 
 async function fetchAllInscriptions(activites, structureId) {
   const allInscriptions = [];
+  const inscriptionCountsBySeanceId = {};
 
   const seances = [];
   for (const activite of activites) {
@@ -834,6 +875,7 @@ async function fetchAllInscriptions(activites, structureId) {
 
     try {
       const inscriptions = await fetchInscriptions(seance.seanceId, structureId);
+      inscriptionCountsBySeanceId[String(seance.seanceId)] = inscriptions.length;
 
       for (const inscription of inscriptions) {
         allInscriptions.push({
@@ -846,12 +888,13 @@ async function fetchAllInscriptions(activites, structureId) {
       }
     } catch (error) {
       console.warn(`Erreur séance ${seance.seanceId}:`, error);
+      inscriptionCountsBySeanceId[String(seance.seanceId)] = 0;
     }
 
     await delay(REQUEST_DELAY);
   }
 
-  return allInscriptions;
+  return { inscriptions: allInscriptions, inscriptionCountsBySeanceId };
 }
 
 async function fetchInscriptions(seanceId, structureId) {
@@ -911,85 +954,6 @@ async function fetchUtilisateur(userId) {
   return await response.json();
 }
 
-function aggregateDataFromInscriptions(utilisateurs, inscriptions, localStructureId, localStructureName) {
-  const benevolesMap = {};
-
-  for (const [userId, user] of Object.entries(utilisateurs)) {
-    benevolesMap[userId] = {
-      id: userId,
-      nivol: userId,
-      nom: user.nom || 'Inconnu',
-      prenom: user.prenom || '',
-      email: '',
-      structure: user.structure?.libelle || '',
-      actif: user.actif,
-      heures: { total: 0, locales: 0, externes: 0, par_mois: {}, par_type: {} },
-      missions: [],
-      inscriptions_count: 0
-    };
-  }
-
-  for (const inscription of inscriptions) {
-    const userId = inscription.utilisateur?.id;
-    if (!userId || !benevolesMap[userId]) continue;
-
-    const benevole = benevolesMap[userId];
-
-    const debut = new Date(inscription.debut);
-    const fin = new Date(inscription.fin);
-    const heures = (fin - debut) / (1000 * 60 * 60);
-
-    if (heures > 0 && heures < 24) {
-      benevole.heures.total += heures;
-      benevole.heures.locales += heures; // Mode structure = tout est local
-
-      const mois = inscription.debut.substring(0, 7);
-      benevole.heures.par_mois[mois] = (benevole.heures.par_mois[mois] || 0) + heures;
-
-      const type = inscription.groupeAction || 'Autre';
-      benevole.heures.par_type[type] = (benevole.heures.par_type[type] || 0) + heures;
-
-      benevole.missions.push({
-        id: inscription.id,
-        activiteId: inscription.activiteId,
-        nom: inscription.activiteLibelle,
-        type: inscription.typeActivite,
-        groupeAction: inscription.groupeAction,
-        date: inscription.debut.substring(0, 10),
-        debut: inscription.debut,
-        fin: inscription.fin,
-        heures: Math.round(heures * 100) / 100,
-        statut: inscription.statut,
-        role: inscription.role,
-        externe: false,
-        structure: localStructureName,
-        structureId: localStructureId
-      });
-
-      benevole.inscriptions_count++;
-    }
-  }
-
-  const benevoles = Object.values(benevolesMap).map(b => ({
-    ...b,
-    heures: {
-      total: Math.round(b.heures.total * 100) / 100,
-      locales: Math.round(b.heures.locales * 100) / 100,
-      externes: Math.round(b.heures.externes * 100) / 100,
-      par_mois: Object.fromEntries(
-        Object.entries(b.heures.par_mois).map(([k, v]) => [k, Math.round(v * 100) / 100])
-      ),
-      par_type: Object.fromEntries(
-        Object.entries(b.heures.par_type).map(([k, v]) => [k, Math.round(v * 100) / 100])
-      )
-    }
-  }));
-
-  benevoles.sort((a, b) => b.heures.total - a.heures.total);
-
-  return benevoles;
-}
-
 function sendProgress(percent, detail) {
   browser.runtime.sendMessage({
     action: 'progress',
@@ -1002,4 +966,4 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-console.log('Pegass Extractor: Content script v1.3 (mode hybride)');
+console.log('Pegass Extractor: Content script v1.3.0 (événements + mode hybride)');

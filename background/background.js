@@ -1,4 +1,5 @@
 import '../lib/browser-shim.mjs';
+import { mergeExtractionData } from '../lib/extraction-core.mjs';
 
 /**
  * Pegass Extractor - Background Script (Service Worker)
@@ -112,163 +113,6 @@ function formatLocalYMD(d) {
 function localYmdFromIso(isoString) {
   if (!isoString) return null;
   return formatLocalYMD(new Date(isoString));
-}
-
-function minYmd(a, b) {
-  if (!a) return b || '';
-  if (!b) return a || '';
-  return a < b ? a : b;
-}
-
-function maxYmd(a, b) {
-  if (!a) return b || '';
-  if (!b) return a || '';
-  return a > b ? a : b;
-}
-
-/**
- * Recalcule heures / par_mois / par_type à partir des missions fusionnées
- */
-function recomputeHeuresFromMissions(b) {
-  const missions = [...(b.missions || [])];
-  const heures = {
-    total: 0,
-    locales: 0,
-    externes: 0,
-    par_mois: {},
-    par_type: {}
-  };
-
-  for (const m of missions) {
-    if (!m) continue;
-    const h = Number(m.heures) || 0;
-    if (h <= 0) continue;
-
-    heures.total += h;
-    if (m.externe) {
-      heures.externes += h;
-    } else {
-      heures.locales += h;
-    }
-
-    const mois = (m.date || (typeof m.debut === 'string' ? m.debut : '') || '').substring(0, 7);
-    if (mois.length === 7) {
-      heures.par_mois[mois] = (heures.par_mois[mois] || 0) + h;
-    }
-
-    const type = m.groupeAction || 'Autre';
-    heures.par_type[type] = (heures.par_type[type] || 0) + h;
-  }
-
-  heures.total = Math.round(heures.total * 100) / 100;
-  heures.locales = Math.round(heures.locales * 100) / 100;
-  heures.externes = Math.round(heures.externes * 100) / 100;
-
-  for (const key of Object.keys(heures.par_mois)) {
-    heures.par_mois[key] = Math.round(heures.par_mois[key] * 100) / 100;
-  }
-  for (const key of Object.keys(heures.par_type)) {
-    heures.par_type[key] = Math.round(heures.par_type[key] * 100) / 100;
-  }
-
-  missions.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-  return {
-    ...b,
-    heures,
-    missions,
-    inscriptions_count: missions.length
-  };
-}
-
-/**
- * Fusionne une extraction complète avec un delta (même mode / même UL attendus)
- */
-function mergeExtractionData(previous, delta) {
-  const oldMeta = previous.metadata || {};
-  const deltaMeta = delta.metadata || {};
-  const periodeOld = oldMeta.periode || {};
-  const periodeDelta = deltaMeta.periode || {};
-
-  const map = new Map();
-  for (const b of previous.benevoles || []) {
-    map.set(String(b.id), {
-      ...b,
-      missions: [...(b.missions || [])]
-    });
-  }
-
-  for (const newB of delta.benevoles || []) {
-    const id = String(newB.id);
-    const newMissions = [...(newB.missions || [])];
-
-    if (!map.has(id)) {
-      map.set(id, recomputeHeuresFromMissions({ ...newB, missions: newMissions }));
-      continue;
-    }
-
-    const oldB = map.get(id);
-    const missionById = new Map();
-    for (const m of oldB.missions) {
-      if (m && m.id != null && m.id !== '') {
-        missionById.set(String(m.id), m);
-      }
-    }
-    for (const m of newMissions) {
-      if (m && m.id != null && m.id !== '') {
-        missionById.set(String(m.id), m);
-      }
-    }
-
-    const merged = {
-      ...oldB,
-      missions: Array.from(missionById.values())
-    };
-    map.set(id, recomputeHeuresFromMissions(merged));
-  }
-
-  const benevoles = Array.from(map.values());
-  benevoles.sort((a, b) => (b.heures?.total || 0) - (a.heures?.total || 0));
-
-  let heuresLocales = 0;
-  let heuresExternes = 0;
-  let totalMissions = 0;
-
-  for (const b of benevoles) {
-    totalMissions += b.missions?.length || 0;
-    for (const m of b.missions || []) {
-      if (!m) continue;
-      const h = Number(m.heures) || 0;
-      if (m.externe) {
-        heuresExternes += h;
-      } else {
-        heuresLocales += h;
-      }
-    }
-  }
-
-  heuresLocales = Math.round(heuresLocales * 100) / 100;
-  heuresExternes = Math.round(heuresExternes * 100) / 100;
-
-  return {
-    metadata: {
-      ...oldMeta,
-      date_extraction: new Date().toISOString(),
-      periode: {
-        debut: minYmd(periodeOld.debut, periodeDelta.debut),
-        fin: maxYmd(periodeOld.fin, periodeDelta.fin)
-      },
-      config_snapshot: oldMeta.config_snapshot || deltaMeta.config_snapshot
-    },
-    benevoles,
-    stats: {
-      total_benevoles: benevoles.length,
-      total_heures: Math.round((heuresLocales + heuresExternes) * 100) / 100,
-      heures_locales: heuresLocales,
-      heures_externes: heuresExternes,
-      total_missions: totalMissions
-    }
-  };
 }
 
 /**
@@ -495,7 +339,7 @@ function convertToCSV(data) {
 function showNotification(title, message) {
   browser.notifications.create({
     type: 'basic',
-    iconUrl: browser.runtime.getURL('icons/icon-96.svg'),
+    iconUrl: browser.runtime.getURL('icons/icon-128.png'),
     title: title,
     message: message
   });

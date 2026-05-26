@@ -1,0 +1,20 @@
+[
+  {
+    "id": "p3235167",
+    "libelle": "02-CASTOR",
+    "statut": "Annulée",
+    "typeActivite": {
+      "libelle": "Réseau 15",
+      "groupeAction": { "libelle": "Urgence et Secourisme" }
+    },
+    "structureOrganisatrice": { "id": 1160 },
+    "seanceList": [
+      {
+        "id": "p3235003",
+        "debut": "2026-04-30T18:00:00",
+        "fin": "2026-04-30T23:00:00",
+        "adresse": "UL"
+      }
+    ]
+  }
+]

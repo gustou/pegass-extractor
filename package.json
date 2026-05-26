@@ -1,12 +1,15 @@
 {
   "name": "pegass-extractor",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "private": true,
+  "type": "module",
   "description": "Extraction de statistiques des bénévoles depuis Pegass (Croix-Rouge française)",
   "scripts": {
-    "lint": "web-ext lint --source-dir=. --ignore-files=package.json package-lock.json README.md LICENSE .gitignore .github/** manifest.chrome.json chrome-dist/** scripts/** docs/**",
+    "test": "node --test test/**/*.test.mjs",
+    "lint": "web-ext lint --source-dir=. --ignore-files=package.json package-lock.json README.md LICENSE .gitignore .github/** manifest.chrome.json chrome-dist/** scripts/** docs/** test/**",
     "build": "web-ext build --source-dir=. --artifacts-dir=web-ext-artifacts --overwrite-dest --filename=pegass-extractor-{version}.zip --ignore-files=package.json package-lock.json README.md LICENSE .gitignore .github/** manifest.chrome.json chrome-dist/** scripts/** docs/**",
     "build:chrome": "node scripts/build-chrome.mjs",
+    "icons:generate": "bash scripts/generate-icons.sh",
     "sign": "web-ext sign --source-dir=. --channel=unlisted --artifacts-dir=web-ext-artifacts --api-key=$AMO_JWT_ISSUER --api-secret=$AMO_JWT_SECRET --ignore-files=package.json package-lock.json README.md LICENSE .gitignore .github/** manifest.chrome.json chrome-dist/** scripts/** docs/**",
     "start": "web-ext run --source-dir=."
   },
