@@ -1,13 +1,13 @@
 # Pegass Extractor
 
-Extension Firefox pour extraire les statistiques des bénévoles depuis Pegass et les visualiser dans votre tableau de bord.
+Extension navigateur (Firefox et Chrome) pour extraire les statistiques des bénévoles depuis Pegass et les visualiser dans votre tableau de bord.
 
 ## 🚀 Installation rapide
 
 ### 1. Téléchargement
 Allez sur la page **[Releases](../../releases)** et téléchargez la dernière version :
-- **Fichier `.xpi`** : Si disponible, c'est la version signée (installation permanente).
-- **Fichier `.zip`** : Version non signée (installation temporaire).
+- **Firefox** — fichier `.xpi` (signé, installation permanente) ou `.zip` (temporaire).
+- **Chrome** — fichier `pegass-extractor-chrome-*.zip` ou lien **non répertorié** du Chrome Web Store (une fois publié).
 
 ### 2. Installation dans Firefox
 1. Ouvrez Firefox et allez à l'adresse `about:debugging#/runtime/this-firefox`.
@@ -15,6 +15,9 @@ Allez sur la page **[Releases](../../releases)** et téléchargez la dernière v
 3. Sélectionnez le fichier téléchargé.
 
 *Note : Pour une installation permanente sans passer par le store officiel, consultez la section dédiée dans la documentation développeur.*
+
+### 3. Installation dans Chrome
+Installez via le lien fourni par votre UL (extension **non répertoriée** sur le Chrome Web Store), ou en développement : `npm run build:chrome` puis chargez le dossier `chrome-dist/` dans `chrome://extensions` (mode développeur). Détails : [docs/CHROME.md](docs/CHROME.md).
 
 ---
 

@@ -1,5 +1,6 @@
 node_modules/
 web-ext-artifacts/
+chrome-dist/
 
 # OS
 .DS_Store

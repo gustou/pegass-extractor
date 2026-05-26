@@ -1,3 +1,5 @@
+import '../lib/browser-shim.mjs';
+
 /**
  * Pegass Extractor - Background Script (Service Worker)
  * Gère l'extraction de manière asynchrone et persiste les données
@@ -72,9 +74,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       return false;
 
-    case 'downloadData':
-      downloadData(message.format).then(sendResponse);
-      return true;
+    case 'prepareDownload':
+      sendResponse(prepareDownload(message.format));
+      return false;
 
     case 'progress':
       updateProgress(message.percent, message.detail);
@@ -436,43 +438,32 @@ async function deleteLastExtraction() {
 }
 
 /**
- * Télécharge les données extraites
+ * Prépare le contenu à télécharger (le popup déclenche downloads.download :
+ * les blob: URL ne fonctionnent pas depuis le service worker Chrome MV3).
  */
-async function downloadData(format) {
+function prepareDownload(format) {
   if (!lastExtraction) {
     return { success: false, error: 'Pas de données' };
   }
 
-  let content, filename, type;
   const date = lastExtraction.metadata?.date_extraction?.split('T')[0] ||
                new Date().toISOString().split('T')[0];
 
   if (format === 'json') {
-    content = JSON.stringify(lastExtraction, null, 2);
-    filename = `pegass_export_${date}.json`;
-    type = 'application/json';
-  } else {
-    content = convertToCSV(lastExtraction);
-    filename = `pegass_export_${date}.csv`;
-    type = 'text/csv';
+    return {
+      success: true,
+      content: JSON.stringify(lastExtraction, null, 2),
+      filename: `pegass_export_${date}.json`,
+      mimeType: 'application/json'
+    };
   }
 
-  // Créer un blob URL et télécharger
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-
-  try {
-    await browser.downloads.download({
-      url: url,
-      filename: filename,
-      saveAs: true
-    });
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-  }
+  return {
+    success: true,
+    content: convertToCSV(lastExtraction),
+    filename: `pegass_export_${date}.csv`,
+    mimeType: 'text/csv;charset=utf-8'
+  };
 }
 
 /**

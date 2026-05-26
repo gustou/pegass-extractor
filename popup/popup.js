@@ -428,21 +428,37 @@ async function cancelExtraction() {
 }
 
 /**
- * Télécharge les données via le background script
+ * Télécharge les données (blob URL créé dans le popup : requis pour Chrome MV3).
  */
 async function downloadData(format) {
   try {
     const response = await browser.runtime.sendMessage({
-      action: 'downloadData',
-      format: format
+      action: 'prepareDownload',
+      format
     });
 
-    if (!response.success) {
-      console.error('Erreur téléchargement:', response.error);
-      alert('Erreur: ' + response.error);
+    if (!response?.success) {
+      const msg = response?.error || 'Téléchargement impossible';
+      console.error('Erreur téléchargement:', msg);
+      alert('Erreur : ' + msg);
+      return;
+    }
+
+    const blob = new Blob([response.content], { type: response.mimeType });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      await browser.downloads.download({
+        url,
+        filename: response.filename,
+        saveAs: true
+      });
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     }
   } catch (error) {
     console.error('Erreur téléchargement:', error);
+    alert('Erreur téléchargement : ' + error.message);
   }
 }
 

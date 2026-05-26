@@ -8,8 +8,12 @@ L'extension est construite en JavaScript pur (Vanilla JS) en utilisant l'API **W
 
 ```
 .
-├── manifest.json         # Configuration Manifest V3
+├── manifest.json         # Manifest Firefox (MV3)
+├── manifest.chrome.json  # Manifest Chrome (service worker)
 ├── package.json          # Scripts de build/lint (web-ext)
+├── scripts/build-chrome.mjs
+├── docs/CHROME.md        # Publication Chrome Web Store (non répertoriée)
+├── lib/                  # Shim browser.* pour Chromium
 ├── popup/
 │   ├── popup.html        # Interface utilisateur
 │   ├── popup.css         # Styles (thème Croix-Rouge)
@@ -38,7 +42,8 @@ L'extension est construite en JavaScript pur (Vanilla JS) en utilisant l'API **W
 | Commande | Description |
 |----------|-------------|
 | `npm run lint` | Valide le code et le manifest via `web-ext`. |
-| `npm run build` | Génère un `.zip` prêt pour la release. |
+| `npm run build` | Génère un `.zip` Firefox prêt pour la release. |
+| `npm run build:chrome` | Génère `chrome-dist/` et un `.zip` pour le Chrome Web Store. |
 | `npm run start` | Lance une instance Firefox isolée avec l'extension chargée. |
 | `npm run sign` | Signe l'extension (nécessite les clés AMO). |
 
@@ -79,6 +84,10 @@ export AMO_JWT_ISSUER="votre_cle"
 export AMO_JWT_SECRET="votre_secret"
 npm run sign
 ```
+
+### Chrome (non répertorié)
+
+Voir [docs/CHROME.md](docs/CHROME.md) : build `npm run build:chrome`, test via `chrome-dist/`, publication CWS en visibilité **Non répertoriée** (frais développeur unique 5 USD).
 
 ## Permissions utilisées
 

@@ -38,8 +38,11 @@ jobs:
             exit 1
           fi
 
-      - name: Build extension
+      - name: Build Firefox extension
         run: npm run build
+
+      - name: Build Chrome extension
+        run: npm run build:chrome
 
       - name: Sign extension (optional)
         if: github.event_name == 'push' && env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
